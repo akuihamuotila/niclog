@@ -2,16 +2,27 @@
   "extends": "expo/tsconfig.base",
   "compilerOptions": {
     "strict": true,
+    "module": "ESNext",
+    "baseUrl": ".",
     "paths": {
       "@/*": [
-        "./*"
+        "./src/*"
       ]
-    }
+    },
+    "types": [
+      "nativewind/types"
+    ]
   },
   "include": [
-    "**/*.ts",
-    "**/*.tsx",
+    "App.tsx",
+    "src/**/*.ts",
+    "src/**/*.tsx",
+    "nativewind.d.ts",
+    "tailwind.config.js",
     ".expo/types/**/*.ts",
     "expo-env.d.ts"
+  ],
+  "exclude": [
+    "node_modules"
   ]
 }
