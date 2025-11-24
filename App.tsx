@@ -1,11 +1,11 @@
-import React from 'react';
-import { Text, View } from 'react-native';
-import { NavigationContainer, DefaultTheme } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { HomeScreen } from './src/screens/HomeScreen';
-import { StatsScreen } from './src/screens/StatsScreen';
-import { SettingsScreen } from './src/screens/SettingsScreen';
+import { DefaultTheme, NavigationContainer } from '@react-navigation/native';
+import { Text, View } from 'react-native';
+import './global.css';
 import { NicotineProvider, useNicotine } from './src/contexts/NicotineContext';
+import { HomeScreen } from './src/screens/HomeScreen';
+import { SettingsScreen } from './src/screens/SettingsScreen';
+import { StatsScreen } from './src/screens/StatsScreen';
 
 export type RootTabParamList = {
   Settings: undefined;
