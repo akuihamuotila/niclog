@@ -1,9 +1,11 @@
 import React from 'react';
+import { Text, View } from 'react-native';
 import { NavigationContainer, DefaultTheme } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { HomeScreen } from './src/screens/HomeScreen';
 import { StatsScreen } from './src/screens/StatsScreen';
 import { SettingsScreen } from './src/screens/SettingsScreen';
+import { NicotineProvider, useNicotine } from './src/contexts/NicotineContext';
 
 export type RootTabParamList = {
   Settings: undefined;
@@ -26,7 +28,17 @@ const nicLogTheme = {
   },
 };
 
-const App = () => {
+const AppTabs = () => {
+  const { isLoading } = useNicotine();
+
+  if (isLoading) {
+    return (
+      <View className="flex-1 items-center justify-center bg-sand">
+        <Text className="text-lg font-semibold text-night">Loading...</Text>
+      </View>
+    );
+  }
+
   return (
     <NavigationContainer theme={nicLogTheme}>
       <Tab.Navigator
@@ -78,6 +90,14 @@ const App = () => {
         />
       </Tab.Navigator>
     </NavigationContainer>
+  );
+};
+
+const App = () => {
+  return (
+    <NicotineProvider>
+      <AppTabs />
+    </NicotineProvider>
   );
 };
 

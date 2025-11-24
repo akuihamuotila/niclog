@@ -18,9 +18,7 @@
     "src/**/*.ts",
     "src/**/*.tsx",
     "nativewind.d.ts",
-    "tailwind.config.js",
-    ".expo/types/**/*.ts",
-    "expo-env.d.ts"
+    "tailwind.config.js"
   ],
   "exclude": [
     "node_modules"
