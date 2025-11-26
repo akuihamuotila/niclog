@@ -19,9 +19,11 @@ export const mergeSettings = (stored: NicotineSettings | null) => {
         : defaultSettings.reminderTimes);
 
   return {
-    ...defaultSettings,
-    ...stored,
+    dailyLimitMg: stored.dailyLimitMg ?? defaultSettings.dailyLimitMg,
+    dailyReminderEnabled:
+      stored.dailyReminderEnabled ?? defaultSettings.dailyReminderEnabled,
+    reminderHour: stored.reminderHour ?? defaultSettings.reminderHour,
     reminderHours,
     reminderTimes,
-  } satisfies NicotineSettings;
+  };
 };

@@ -12,12 +12,15 @@ interface Params {
 export const useNicotineReminders = ({ state, isLoading }: Params) => {
   useEffect(() => {
     if (isLoading) return;
+    // Mirror reminder settings into scheduled notifications whenever they change.
     const syncReminders = async () => {
       if (state.settings.dailyReminderEnabled) {
-        const times: string[] =
-          state.settings.reminderTimes?.length && state.settings.reminderTimes[0]
+        const fallbackTimes = defaultSettings.reminderTimes ?? [];
+        const times =
+          state.settings.reminderTimes?.length &&
+          state.settings.reminderTimes[0]
             ? state.settings.reminderTimes
-            : defaultSettings.reminderTimes;
+            : fallbackTimes;
         await scheduleDailyReminders(times);
       } else {
         await cancelDailyReminder();

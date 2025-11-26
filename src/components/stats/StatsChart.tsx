@@ -1,3 +1,4 @@
+// Compact SVG line chart plotting daily nicotine totals with optional labels for 7d range.
 import React from 'react';
 import { View, Text as RNText, useWindowDimensions } from 'react-native';
 import { Svg, Path, Circle, Line, Text as SvgText } from 'react-native-svg';
@@ -19,6 +20,7 @@ const formatDate = (dateString: string) => {
 
 export const StatsChart = ({ dailyTotals, range }: Props) => {
   const { width } = useWindowDimensions();
+  // Layout values to keep the chart responsive and legible.
   const chartWidth = Math.max(width - 40, 220);
   const chartHeight = 200;
   const maxMg =
@@ -45,6 +47,7 @@ export const StatsChart = ({ dailyTotals, range }: Props) => {
   return (
     <View className="mt-5 h-[240px] w-full items-center justify-center">
       <Svg width={chartWidth} height={chartHeight}>
+        {/* Axes lines with dashed styling for readability. */}
         <Line
           x1={paddingX}
           y1={paddingY}
@@ -63,6 +66,7 @@ export const StatsChart = ({ dailyTotals, range }: Props) => {
           strokeWidth={1}
           strokeDasharray="4 4"
         />
+        {/* Horizontal labels to show mg scale. */}
         {Array.from({ length: yTicks + 1 }).map((_, idx) => {
           const value = (maxMg / yTicks) * idx;
           const y =
@@ -84,6 +88,7 @@ export const StatsChart = ({ dailyTotals, range }: Props) => {
         })}
         {dailyTotals.length > 1 ? (
           (() => {
+            // Build a polyline across all days with dots at each point.
             const points = dailyTotals.map((day, index) => {
               const value =
                 maxMg === 0 ? 0 : (day.totalMg / maxMg) * innerHeight;
@@ -111,6 +116,7 @@ export const StatsChart = ({ dailyTotals, range }: Props) => {
           })()
         ) : (
           (() => {
+            // Special-case single point to keep the chart centered.
             const value =
               maxMg === 0
                 ? 0
@@ -131,6 +137,7 @@ export const StatsChart = ({ dailyTotals, range }: Props) => {
         )}
 
         {range === 7 &&
+          /* Show x-axis labels only for the short 7-day range to avoid clutter. */
           dailyTotals.map((day, index) => {
             const x =
               dailyTotals.length > 1

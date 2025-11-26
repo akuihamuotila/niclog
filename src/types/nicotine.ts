@@ -1,5 +1,7 @@
+// Product categories the user can log.
 export type ProductType = 'snus' | 'pouch' | 'vape' | 'cigarette' | 'other';
 
+// One nicotine usage entry with totals and pricing in EUR.
 export interface NicotineEntry {
   id: string;
   timestamp: string;
@@ -7,27 +9,20 @@ export interface NicotineEntry {
   nicotinePerUnitMg: number;
   amount: number;
   totalMg: number;
-  pricePerUnit: number;
-  totalCost: number;
-  currency: string;
+  pricePerUnitEur: number;
+  totalCostEur: number;
 }
 
-export interface CurrencyRates {
-  base: string;
-  rates: Record<string, number>;
-  lastUpdated: string | null;
-}
-
+// User settings for nicotine tracking.
 export interface NicotineSettings {
   dailyLimitMg: number | null;
-  baseCurrency: string;
   dailyReminderEnabled: boolean;
   reminderHour: number;
   reminderHours?: number[];
   reminderTimes?: string[];
-  currencyRates: CurrencyRates | null;
 }
 
+// Root state holding all entries and settings.
 export interface NicotineState {
   entries: NicotineEntry[];
   settings: NicotineSettings;

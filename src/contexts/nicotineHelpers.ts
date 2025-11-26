@@ -1,6 +1,6 @@
-import { CurrencyRates, NicotineEntry } from '../types/nicotine';
-import { convertToBaseCurrency } from '../utils/currency';
+import { NicotineEntry } from '../types/nicotine';
 
+// Generate a unique ID using crypto.randomUUID when available or a timestamp fallback.
 export const createId = () => {
   const randomUuid =
     typeof globalThis !== 'undefined'
@@ -19,6 +19,7 @@ export const createId = () => {
     .slice(2, 8)}`;
 };
 
+// Convert a Date to YYYY-MM-DD without mutating the original object.
 export const getDateKey = (date: Date) => {
   const year = date.getFullYear();
   const month = `${date.getMonth() + 1}`.padStart(2, '0');
@@ -26,11 +27,10 @@ export const getDateKey = (date: Date) => {
   return `${year}-${month}-${day}`;
 };
 
+// Sum nicotine mg and spending for a single local day in EUR.
 export const getTotalsForDay = (
   targetDate: Date,
   entries: NicotineEntry[],
-  baseCurrency: string,
-  rates: CurrencyRates | null,
 ): { totalMg: number; totalCost: number } => {
   const start = new Date(targetDate);
   start.setHours(0, 0, 0, 0);
@@ -42,12 +42,7 @@ export const getTotalsForDay = (
       const entryDate = new Date(entry.timestamp);
       if (entryDate >= start && entryDate < end) {
         acc.totalMg += entry.totalMg;
-        acc.totalCost += convertToBaseCurrency(
-          entry.totalCost,
-          entry.currency,
-          baseCurrency,
-          rates,
-        );
+        acc.totalCost += entry.totalCostEur;
       }
       return acc;
     },
@@ -55,6 +50,7 @@ export const getTotalsForDay = (
   );
 };
 
+// Clamp reminder HH:MM strings to valid ranges and keep all entries.
 export const sanitizeReminderTimes = (
   times: string[],
   fallback: string[] | undefined,

@@ -1,3 +1,4 @@
+// Pill buttons for choosing which nicotine product type to log.
 import React from 'react';
 import { Text, TouchableOpacity, View } from 'react-native';
 

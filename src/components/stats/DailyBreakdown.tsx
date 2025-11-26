@@ -1,3 +1,4 @@
+// Accordion-style list of days that expands to view, add, and edit entries.
 import React from 'react';
 import { FlatList, Text, TouchableOpacity, View } from 'react-native';
 
@@ -7,7 +8,6 @@ import { DailyTotal } from '../../utils/stats';
 
 interface Props {
   dailyTotals: DailyTotal[];
-  baseCurrency: string;
   selectedDate: string | null;
   entriesByDate: Map<string, NicotineEntry[]>;
   onSelectDate: (date: string) => void;
@@ -39,7 +39,6 @@ interface Props {
 
 export const DailyBreakdown = ({
   dailyTotals,
-  baseCurrency,
   selectedDate,
   entriesByDate,
   onSelectDate,
@@ -93,7 +92,7 @@ export const DailyBreakdown = ({
                     {item.totalMg.toFixed(1)} mg
                   </Text>
                   <Text className="text-sm text-night">
-                    {item.totalCost.toFixed(2)} {baseCurrency}
+                    {item.totalCost.toFixed(2)} EUR
                   </Text>
                   <Text className="mt-1 text-xs text-primary">
                     Tap to view entries
@@ -104,7 +103,6 @@ export const DailyBreakdown = ({
                     <SelectedDayDetails
                       dateLabel={formatDate(item.date)}
                       entries={entriesForDay}
-                      baseCurrency={baseCurrency}
                       productOptions={productOptions}
                       addProduct={addProduct}
                       addNicotine={addNicotine}

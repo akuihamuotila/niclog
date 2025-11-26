@@ -1,12 +1,13 @@
+// Expanded day view showing entries plus inline add/edit/delete controls.
 import React from 'react';
 import { Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 import { NicotineEntry, ProductType } from '../../types/nicotine';
+import { DISPLAY_CURRENCY } from '../../utils/currencyLabel';
 
 interface Props {
   dateLabel: string;
   entries: NicotineEntry[];
-  baseCurrency: string;
   productOptions: readonly ProductType[];
   addProduct: ProductType;
   addNicotine: string;
@@ -35,7 +36,6 @@ interface Props {
 export const SelectedDayDetails = ({
   dateLabel,
   entries,
-  baseCurrency,
   productOptions,
   addProduct,
   addNicotine,
@@ -93,8 +93,7 @@ export const SelectedDayDetails = ({
                 {entry.totalMg.toFixed(1)} mg
               </Text>
               <Text className="text-sm text-night">
-                {entry.amount} × {entry.pricePerUnit} {baseCurrency} ={' '}
-                {entry.totalCost.toFixed(2)} {baseCurrency}
+                {entry.amount} × {entry.pricePerUnitEur} {DISPLAY_CURRENCY} = {entry.totalCostEur.toFixed(2)} {DISPLAY_CURRENCY}
               </Text>
               <View className="mt-2 flex-row gap-2">
                 <TouchableOpacity
@@ -119,6 +118,7 @@ export const SelectedDayDetails = ({
         <Text className="text-sm font-semibold text-night">
           Add new entry for this day
         </Text>
+        {/* Quick-select chips for product types. */}
         <View className="mt-2 flex-row flex-wrap gap-2">
           {productOptions.map((type) => {
             const selected = addProduct === type;

@@ -1,5 +1,7 @@
+// Notification helpers: register handler, schedule daily reminders at given HH:MM times, and cancel all.
 import * as Notifications from 'expo-notifications';
 
+// Configure notifications to show alerts/banners/list entries with sound, no badge; exit safely if unsupported.
 export const setupNotificationHandler = () => {
   if (
     !Notifications ||
@@ -9,7 +11,7 @@ export const setupNotificationHandler = () => {
   }
   Notifications.setNotificationHandler({
     handleNotification: async () => ({
-      shouldShowAlert: false,
+      shouldShowAlert: true,
       shouldShowBanner: true,
       shouldShowList: true,
       shouldPlaySound: false,
@@ -18,6 +20,7 @@ export const setupNotificationHandler = () => {
   });
 };
 
+// Request permission and schedule repeating daily reminders for each HH:MM string; clamp invalid times and replace old schedules.
 export const scheduleDailyReminders = async (
   times: string[],
 ): Promise<string[] | null> => {
@@ -67,6 +70,7 @@ export const scheduleDailyReminders = async (
   }
 };
 
+// Cancel every scheduled daily reminder; log and continue on error so the UI stays responsive.
 export const cancelDailyReminder = async () => {
   try {
     await Notifications.cancelAllScheduledNotificationsAsync();

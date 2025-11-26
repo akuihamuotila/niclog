@@ -1,18 +1,24 @@
+// List of today's logged entries with time, mg, and cost details.
 import React from 'react';
 import { FlatList, Text, View } from 'react-native';
 
 import { NicotineEntry } from '../../types/nicotine';
+import { DISPLAY_CURRENCY } from '../../utils/currencyLabel';
 
 interface Props {
   entries: NicotineEntry[];
-  baseCurrency: string;
 }
 
-export const TodayEntries = ({ entries, baseCurrency }: Props) => {
+export const TodayEntries = ({ entries }: Props) => {
+  const sorted = [...entries].sort(
+    (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime(),
+  );
+  // Render a single entry row with formatted time and totals.
   const renderEntry = ({ item }: { item: NicotineEntry }) => {
     const time = new Date(item.timestamp).toLocaleTimeString([], {
       hour: '2-digit',
       minute: '2-digit',
+      hour12: false,
     });
     return (
       <View className="mb-3 rounded-2xl bg-white/70 px-4 py-3 shadow-sm">
@@ -24,8 +30,8 @@ export const TodayEntries = ({ entries, baseCurrency }: Props) => {
           {item.amount} × {item.nicotinePerUnitMg} mg = {item.totalMg} mg
         </Text>
         <Text className="text-sm text-night">
-          {item.amount} × {item.pricePerUnit} {baseCurrency} = {item.totalCost}{' '}
-          {baseCurrency}
+          {item.amount} × {item.pricePerUnitEur} {DISPLAY_CURRENCY} = {item.totalCostEur}{' '}
+          {DISPLAY_CURRENCY}
         </Text>
       </View>
     );
@@ -41,7 +47,7 @@ export const TodayEntries = ({ entries, baseCurrency }: Props) => {
       ) : (
         <FlatList
           className="mt-3"
-          data={entries}
+          data={sorted}
           renderItem={renderEntry}
           keyExtractor={(item) => item.id}
           scrollEnabled={false}

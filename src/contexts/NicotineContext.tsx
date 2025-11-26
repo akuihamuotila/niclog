@@ -1,15 +1,6 @@
 import React, { createContext, useCallback, useContext, useMemo, useState } from 'react';
 
-import {
-  deleteEntry as deleteDbEntry,
-  insertEntry,
-  updateEntry as updateDbEntry,
-} from '../db/nicotineDb';
-import {
-  CurrencyRates,
-  NicotineEntry,
-  NicotineState
-} from '../types/nicotine';
+import { NicotineEntry, NicotineState } from '../types/nicotine';
 import { defaultSettings } from '../utils/settingsStorage';
 import {
   AddEntryInput,
@@ -18,9 +9,9 @@ import {
 } from './nicotineEntries';
 import { getDateKey, getTotalsForDay, sanitizeReminderTimes } from './nicotineHelpers';
 import { useNicotineBootstrap } from './useNicotineBootstrap';
-import { useNicotineRates } from './useNicotineRates';
 import { useNicotineReminders } from './useNicotineReminders';
 import { usePersistSettings } from './usePersistSettings';
+import { nicotineService } from '../services/nicotineService';
 
 export interface NicotineContextValue {
   state: NicotineState;
@@ -28,13 +19,11 @@ export interface NicotineContextValue {
   addEntry(input: AddEntryInput): Promise<void>;
   updateEntry(entry: NicotineEntry): Promise<void>;
   setDailyLimit(limitMg: number | null): Promise<void>;
-  setBaseCurrency(currency: string): Promise<void>;
   setDailyReminder(enabled: boolean): Promise<void>;
   setReminderHour(hour: number): Promise<void>;
   setReminderHours(hours: number[]): Promise<void>;
   setReminderTimes(times: string[]): Promise<void>;
   deleteEntryById(id: string): Promise<void>;
-  setCurrencyRates(rates: CurrencyRates): Promise<void>;
   getTodayTotalMg(): number;
   getTodayTotalCost(): number;
   getDailyTotals(
@@ -51,6 +40,7 @@ export const NicotineProvider = ({
 }: {
   children: React.ReactNode;
 }) => {
+  // Hold global nicotine entries and settings for the app.
   const [state, setState] = useState<NicotineState>({
     entries: [],
     settings: defaultSettings,
@@ -58,16 +48,16 @@ export const NicotineProvider = ({
   const [isLoading, setIsLoading] = useState(true);
 
   useNicotineBootstrap({ setState, setIsLoading });
-  useNicotineRates({ state, isLoading, setState });
   useNicotineReminders({ state, isLoading });
   usePersistSettings({ state, isLoading });
 
   const addEntry = useCallback(
     async (input: AddEntryInput) => {
-      const entry = buildEntry(input, state.settings.baseCurrency);
+      // Build a new entry with totals, persist it, and sync state.
+      const entry = buildEntry(input);
 
       try {
-        await insertEntry(entry);
+        await nicotineService.add(entry);
         setState((prev) => ({
           ...prev,
           entries: [...prev.entries, entry],
@@ -77,14 +67,15 @@ export const NicotineProvider = ({
         throw error;
       }
     },
-    [state.settings.baseCurrency],
+    [],
   );
 
   const updateEntry = useCallback(
     async (entry: NicotineEntry) => {
+      // Recalculate totals for an edited entry and persist changes.
       const updated = recalcEntryTotals(entry);
       try {
-        await updateDbEntry(updated);
+        await nicotineService.update(updated);
         setState((prev) => ({
           ...prev,
           entries: prev.entries.map((e) => (e.id === updated.id ? updated : e)),
@@ -99,6 +90,7 @@ export const NicotineProvider = ({
 
   const setDailyLimit = useCallback(
     async (limitMg: number | null) => {
+      // Update the optional daily nicotine cap in settings.
       setState((prev) => ({
         ...prev,
         settings: { ...prev.settings, dailyLimitMg: limitMg },
@@ -107,18 +99,8 @@ export const NicotineProvider = ({
     [],
   );
 
-  const setBaseCurrency = useCallback(async (currency: string) => {
-    setState((prev) => ({
-      ...prev,
-      settings: {
-        ...prev.settings,
-        baseCurrency: currency,
-        currencyRates: null,
-      },
-    }));
-  }, []);
-
   const setDailyReminder = useCallback(async (enabled: boolean) => {
+    // Enable or disable daily reminder scheduling.
     setState((prev) => ({
       ...prev,
       settings: { ...prev.settings, dailyReminderEnabled: enabled },
@@ -126,6 +108,7 @@ export const NicotineProvider = ({
   }, []);
 
   const setReminderHour = useCallback(async (hour: number) => {
+    // Set a single reminder hour and keep derived hour/time lists in sync.
     setState((prev) => ({
       ...prev,
       settings: {
@@ -138,6 +121,7 @@ export const NicotineProvider = ({
   }, []);
 
   const setReminderHours = useCallback(async (hours: number[]) => {
+    // Accept multiple reminder hours, clamp them, and derive HH:00 strings.
     const safeHours = hours.map((h) => Math.max(0, Math.min(23, Math.round(h))));
     setState((prev) => ({
       ...prev,
@@ -152,6 +136,7 @@ export const NicotineProvider = ({
   }, []);
 
   const setReminderTimes = useCallback(async (times: string[]) => {
+    // Accept HH:MM strings, sanitize them, and align hour fields.
     setState((prev) => {
       const nextTimes = sanitizeReminderTimes(
         times,
@@ -177,16 +162,10 @@ export const NicotineProvider = ({
     });
   }, []);
 
-  const setCurrencyRates = useCallback(async (rates: CurrencyRates) => {
-    setState((prev) => ({
-      ...prev,
-      settings: { ...prev.settings, currencyRates: rates },
-    }));
-  }, []);
-
   const deleteEntryById = useCallback(async (id: string) => {
+    // Remove a single entry from storage and local state.
     try {
-      await deleteDbEntry(id);
+      await nicotineService.deleteById(id);
       setState((prev) => ({
         ...prev,
         entries: prev.entries.filter((entry) => entry.id !== id),
@@ -198,27 +177,20 @@ export const NicotineProvider = ({
   }, []);
 
   const getTodayTotalMg = useCallback(() => {
-    const totals = getTotalsForDay(
-      new Date(),
-      state.entries,
-      state.settings.baseCurrency,
-      state.settings.currencyRates,
-    );
+    // Sum nicotine mg for the current local day.
+    const totals = getTotalsForDay(new Date(), state.entries);
     return totals.totalMg;
-  }, [state.entries, state.settings.baseCurrency, state.settings.currencyRates]);
+  }, [state.entries]);
 
   const getTodayTotalCost = useCallback(() => {
-    const totals = getTotalsForDay(
-      new Date(),
-      state.entries,
-      state.settings.baseCurrency,
-      state.settings.currencyRates,
-    );
+    // Sum spending for the current local day in EUR.
+    const totals = getTotalsForDay(new Date(), state.entries);
     return totals.totalCost;
-  }, [state.entries, state.settings.baseCurrency, state.settings.currencyRates]);
+  }, [state.entries]);
 
   const getDailyTotals = useCallback(
     (daysBack: number) => {
+      // Build a fixed-length list of daily totals for charting.
       const today = new Date();
       today.setHours(0, 0, 0, 0);
 
@@ -226,12 +198,7 @@ export const NicotineProvider = ({
       for (let i = daysBack - 1; i >= 0; i -= 1) {
         const day = new Date(today);
         day.setDate(today.getDate() - i);
-        const { totalMg, totalCost } = getTotalsForDay(
-          day,
-          state.entries,
-          state.settings.baseCurrency,
-          state.settings.currencyRates,
-        );
+        const { totalMg, totalCost } = getTotalsForDay(day, state.entries);
         totals.push({
           date: getDateKey(day),
           totalMg,
@@ -241,11 +208,7 @@ export const NicotineProvider = ({
 
       return totals;
     },
-    [
-      state.entries,
-      state.settings.baseCurrency,
-      state.settings.currencyRates,
-    ],
+    [state.entries],
   );
 
   const value = useMemo<NicotineContextValue>(
@@ -255,13 +218,11 @@ export const NicotineProvider = ({
       addEntry,
       updateEntry,
       setDailyLimit,
-      setBaseCurrency,
       setDailyReminder,
       setReminderHour,
       setReminderHours,
       setReminderTimes,
       deleteEntryById,
-      setCurrencyRates,
       getTodayTotalMg,
       getTodayTotalCost,
       getDailyTotals,
@@ -272,13 +233,11 @@ export const NicotineProvider = ({
       addEntry,
       updateEntry,
       setDailyLimit,
-      setBaseCurrency,
       setDailyReminder,
       setReminderHour,
       setReminderHours,
       setReminderTimes,
       deleteEntryById,
-      setCurrencyRates,
       getTodayTotalMg,
       getTodayTotalCost,
       getDailyTotals,

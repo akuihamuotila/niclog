@@ -1,3 +1,4 @@
+// Stats screen with range selector, chart, and per-day entry management.
 import { useMemo, useState } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -11,6 +12,7 @@ import {
   buildDailyTotals,
   getDateKey,
   summarizeDailyTotals,
+  filterEntriesByRange,
 } from '../utils/stats';
 
 const PRODUCT_OPTIONS = [
@@ -32,6 +34,7 @@ const RANGE_OPTIONS: RangeOptionItem[] = [
 
 export const StatsScreen = () => {
   const { state, updateEntry, addEntry, deleteEntryById } = useNicotine();
+  // Range selector and UI state for add/edit flows.
   const [range, setRange] = useState<RangeOption>(30);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [editingEntryId, setEditingEntryId] = useState<string | null>(null);
@@ -45,22 +48,25 @@ export const StatsScreen = () => {
   const [addError, setAddError] = useState<string | null>(null);
   const [addProduct, setAddProduct] = useState<(typeof PRODUCT_OPTIONS)[number]>('other');
 
-  const dailyTotals = useMemo(
-    () =>
-      buildDailyTotals(
-        state.entries,
-        range,
-        state.settings.baseCurrency,
-        state.settings.currencyRates,
-      ),
-    [state.entries, range, state.settings.baseCurrency, state.settings.currencyRates],
+  // Entries limited to the selected range for consistent breakdown lists.
+  const filteredEntries = useMemo(
+    () => filterEntriesByRange(state.entries, range),
+    [state.entries, range],
   );
 
+  // Build daily totals based on selected range using entered EUR costs.
+  const dailyTotals = useMemo(
+    () => buildDailyTotals(state.entries, range),
+    [state.entries, range],
+  );
+
+  // Summaries for total/average mg and cost.
   const summary = useMemo(() => summarizeDailyTotals(dailyTotals), [dailyTotals]);
 
+  // Map entries by date to support per-day breakdowns and edits.
   const entriesByDate = useMemo(() => {
     const map = new Map<string, typeof state.entries>();
-    state.entries.forEach((entry) => {
+    filteredEntries.forEach((entry) => {
       const key = getDateKey(new Date(entry.timestamp));
       const list = map.get(key) ?? [];
       list.push(entry);
@@ -71,7 +77,7 @@ export const StatsScreen = () => {
       map.set(key, list);
     });
     return map;
-  }, [state.entries]);
+  }, [filteredEntries]);
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -101,16 +107,18 @@ export const StatsScreen = () => {
   };
 
   const startEditing = (entryId: string) => {
+    // Load an entry's fields into edit inputs for inline editing.
     const entry = state.entries.find((e) => e.id === entryId);
     if (!entry) return;
     setEditingEntryId(entry.id);
     setEditNicotine(entry.nicotinePerUnitMg.toString());
     setEditAmount(entry.amount.toString());
-    setEditPrice(entry.pricePerUnit.toString());
+    setEditPrice(entry.pricePerUnitEur.toString());
     setEditError(null);
   };
 
   const saveEdit = async () => {
+    // Validate and persist edits to an existing entry.
     if (!editingEntryId) return;
     const baseEntry = state.entries.find((e) => e.id === editingEntryId);
     if (!baseEntry) return;
@@ -133,7 +141,7 @@ export const StatsScreen = () => {
         ...baseEntry,
         nicotinePerUnitMg: nicotineVal,
         amount: amountVal,
-        pricePerUnit: priceVal,
+        pricePerUnitEur: priceVal,
       });
       setEditingEntryId(null);
     } catch (error) {
@@ -142,6 +150,7 @@ export const StatsScreen = () => {
   };
 
   const addEntryForDate = async () => {
+    // Validate and add a new entry for the selected date.
     if (!selectedDate) return;
     const nicotineVal = parseFloat(addNicotine);
     const amountVal = parseFloat(addAmount);
@@ -166,7 +175,7 @@ export const StatsScreen = () => {
         productType: addProduct,
         nicotinePerUnitMg: nicotineVal,
         amount: amountVal,
-        pricePerUnit: priceVal,
+        pricePerUnitEur: priceVal,
         timestamp: stamp,
       });
       setAddNicotine('');
@@ -178,6 +187,7 @@ export const StatsScreen = () => {
     }
   };
 
+  // Render stats layout with summary, range selector, chart, and daily breakdown.
   return (
     <SafeAreaView className="flex-1 bg-sand">
       <KeyboardAvoidingView
@@ -189,11 +199,7 @@ export const StatsScreen = () => {
           className="flex-1"
           contentContainerStyle={{ padding: 20, gap: 16 }}
         >
-          <StatsSummaryCard
-            summary={summary}
-            range={range}
-            currency={state.settings.baseCurrency}
-          />
+          <StatsSummaryCard summary={summary} range={range} />
 
           <RangeSelector
             options={RANGE_OPTIONS}
@@ -205,12 +211,11 @@ export const StatsScreen = () => {
 
           <DailyBreakdown
             dailyTotals={dailyTotals}
-            baseCurrency={state.settings.baseCurrency}
             selectedDate={selectedDate}
             entriesByDate={entriesByDate}
             onSelectDate={(date) => {
               handleCancelEdit();
-              setSelectedDate(date);
+              setSelectedDate((prev) => (prev === date ? null : date));
               setEditError(null);
             }}
             formatDate={formatDate}

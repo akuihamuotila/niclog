@@ -1,3 +1,4 @@
+// Button group for choosing the stats range (7d, 30d, etc.).
 import React from 'react';
 import { Text, TouchableOpacity, View } from 'react-native';
 

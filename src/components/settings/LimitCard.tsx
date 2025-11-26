@@ -1,3 +1,4 @@
+// Card that lets the user set a daily nicotine limit value.
 import React from 'react';
 import { Text, TextInput, View } from 'react-native';
 

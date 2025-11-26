@@ -1,11 +1,13 @@
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { DefaultTheme, NavigationContainer } from '@react-navigation/native';
 import { Text, View } from 'react-native';
+import { useEffect } from 'react';
 import './global.css';
 import { NicotineProvider, useNicotine } from './src/contexts/NicotineContext';
 import { HomeScreen } from './src/screens/HomeScreen';
 import { SettingsScreen } from './src/screens/SettingsScreen';
 import { StatsScreen } from './src/screens/StatsScreen';
+import { setupNotificationHandler } from './src/utils/reminders';
 
 export type RootTabParamList = {
   Settings: undefined;
@@ -30,6 +32,10 @@ const nicLogTheme = {
 
 const AppTabs = () => {
   const { isLoading } = useNicotine();
+  // Ensure notification handler is registered once so alerts appear even in foreground.
+  useEffect(() => {
+    setupNotificationHandler();
+  }, []);
 
   if (isLoading) {
     return (

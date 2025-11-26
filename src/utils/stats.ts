@@ -1,5 +1,5 @@
-import { CurrencyRates, NicotineEntry } from '../types/nicotine';
-import { convertToBaseCurrency } from './currency';
+// Stats helpers: range filtering, daily totals, summaries, and date key creation.
+import { NicotineEntry } from '../types/nicotine';
 
 export type RangeOption = number | 'all';
 
@@ -16,6 +16,7 @@ export interface RangeSummary {
   avgCost: number;
 }
 
+// Turn a Date into YYYY-MM-DD in local time by zeroing the time portion.
 export const getDateKey = (date: Date) => {
   const copy = new Date(date);
   copy.setHours(0, 0, 0, 0);
@@ -25,11 +26,13 @@ export const getDateKey = (date: Date) => {
   return `${year}-${month}-${day}`;
 };
 
+// Convert an ISO timestamp string into a normalized date key.
 const getDateKeyFromTimestamp = (timestamp: string) => {
   const date = new Date(timestamp);
   return getDateKey(date);
 };
 
+// Create a list of date keys covering N days back including today.
 const createRangeKeys = (daysBack: number): string[] => {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -42,6 +45,7 @@ const createRangeKeys = (daysBack: number): string[] => {
   return keys;
 };
 
+// Filter entries to a date range (all or N days) and return them oldest-first.
 export const filterEntriesByRange = (
   entries: NicotineEntry[],
   range: RangeOption,
@@ -68,11 +72,10 @@ export const filterEntriesByRange = (
     );
 };
 
+// Group entries by day and sum nicotine mg and cost (as entered), filling missing days with zeroes for fixed ranges.
 export const buildDailyTotals = (
   entries: NicotineEntry[],
   range: RangeOption,
-  baseCurrency: string,
-  rates: CurrencyRates | null,
 ): DailyTotal[] => {
   const filtered = filterEntriesByRange(entries, range);
   const grouped = new Map<string, DailyTotal>();
@@ -80,16 +83,10 @@ export const buildDailyTotals = (
   filtered.forEach((entry) => {
     const key = getDateKeyFromTimestamp(entry.timestamp);
     const existing = grouped.get(key) ?? { date: key, totalMg: 0, totalCost: 0 };
-    const costInBase = convertToBaseCurrency(
-      entry.totalCost,
-      entry.currency,
-      baseCurrency,
-      rates,
-    );
     grouped.set(key, {
       date: key,
       totalMg: existing.totalMg + entry.totalMg,
-      totalCost: existing.totalCost + costInBase,
+      totalCost: existing.totalCost + entry.totalCostEur,
     });
   });
 
@@ -99,11 +96,11 @@ export const buildDailyTotals = (
     );
   }
 
-  // fill missing days with zeros for the selected range
   const keys = createRangeKeys(range);
   return keys.map((key) => grouped.get(key) ?? { date: key, totalMg: 0, totalCost: 0 });
 };
 
+// Summarize totals and daily averages from an array of daily aggregates; empty input returns zeros.
 export const summarizeDailyTotals = (daily: DailyTotal[]): RangeSummary => {
   if (daily.length === 0) {
     return { totalMg: 0, avgMg: 0, totalCost: 0, avgCost: 0 };

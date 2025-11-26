@@ -1,22 +1,27 @@
+// Home screen showing today's intake summary, logging form, and today's entries list.
 import { Audio } from 'expo-av';
 import * as Haptics from 'expo-haptics';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { DailyTipCard } from '../components/home/DailyTipCard';
 import { EntryForm } from '../components/home/EntryForm';
 import { SummaryCard } from '../components/home/SummaryCard';
 import { TodayEntries } from '../components/home/TodayEntries';
 import { useNicotine } from '../contexts/NicotineContext';
+import { useDailyQuote } from '../hooks/useDailyQuote';
 import { ProductType } from '../types/nicotine';
 
 type SoundRef = Audio.Sound | null;
 
+// Parse locale-friendly numeric input (commas allowed) into a number or null.
 const parseNumber = (value: string) => {
   const parsed = parseFloat(value.replace(',', '.'));
   return Number.isNaN(parsed) ? null : parsed;
 };
 
+// Check if a timestamp falls on the current local day.
 const isToday = (timestamp: string) => {
   const entryDate = new Date(timestamp);
   const now = new Date();
@@ -29,7 +34,9 @@ const isToday = (timestamp: string) => {
 
 export const HomeScreen = () => {
   const { state, addEntry, getTodayTotalCost, getTodayTotalMg } = useNicotine();
+  const { quote, refreshQuote } = useDailyQuote();
 
+  // Local form state for the entry being created.
   const [selectedProduct, setSelectedProduct] = useState<ProductType | null>(
     null,
   );
@@ -42,6 +49,7 @@ export const HomeScreen = () => {
   useEffect(() => {
     let isMounted = true;
 
+    // Preload the click sound for instant feedback.
     const loadSound = async () => {
       try {
         const { sound } = await Audio.Sound.createAsync(
@@ -59,12 +67,14 @@ export const HomeScreen = () => {
 
     return () => {
       isMounted = false;
+      // Release sound resources when unmounting.
       if (soundRef.current) {
         soundRef.current.unloadAsync().catch(() => {});
       }
     };
   }, []);
 
+  // Memoize today's entries so renders stay cheap.
   const todayEntries = useMemo(
     () => state.entries.filter((entry) => isToday(entry.timestamp)),
     [state.entries],
@@ -72,8 +82,9 @@ export const HomeScreen = () => {
 
   const totalMg = getTodayTotalMg();
   const totalCost = getTodayTotalCost();
-  const { dailyLimitMg, baseCurrency } = state.settings;
+  const { dailyLimitMg } = state.settings;
 
+  // Track progress toward the optional daily limit (capped at 200% for bar overflow).
   const limitProgress =
     dailyLimitMg && dailyLimitMg > 0
       ? Math.min((totalMg / dailyLimitMg) * 100, 200)
@@ -97,6 +108,7 @@ export const HomeScreen = () => {
       : null;
 
   const handleAddEntry = async () => {
+    // Validate input, persist the entry, and provide haptic/sound feedback.
     setError(null);
     if (
       !selectedProduct ||
@@ -116,8 +128,9 @@ export const HomeScreen = () => {
         productType: selectedProduct,
         nicotinePerUnitMg: nicotineValue,
         amount: amountValue,
-        pricePerUnit: priceValue,
+        pricePerUnitEur: priceValue,
       });
+      refreshQuote();
 
       await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
       if (soundRef.current) {
@@ -133,6 +146,7 @@ export const HomeScreen = () => {
     }
   };
 
+  // Render the main home layout with summary, form, and today's entries.
   return (
     <SafeAreaView className="flex-1 bg-sand">
       <KeyboardAvoidingView
@@ -151,13 +165,13 @@ export const HomeScreen = () => {
           <SummaryCard
             totalMg={totalMg}
             totalCost={totalCost}
-            baseCurrency={baseCurrency}
             dailyLimitMg={dailyLimitMg}
             limitProgress={limitProgress}
           />
 
+          <DailyTipCard quote={quote} />
+
           <EntryForm
-            baseCurrency={baseCurrency}
             selectedProduct={selectedProduct}
             nicotinePerUnit={nicotinePerUnit}
             amount={amount}
@@ -171,7 +185,7 @@ export const HomeScreen = () => {
             onSubmit={handleAddEntry}
           />
 
-          <TodayEntries entries={todayEntries} baseCurrency={baseCurrency} />
+          <TodayEntries entries={todayEntries} />
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>

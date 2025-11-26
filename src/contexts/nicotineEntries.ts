@@ -1,17 +1,18 @@
 import { NicotineEntry } from '../types/nicotine';
 import { createId } from './nicotineHelpers';
 
+// Input shape for creating a new entry; timestamp is optional for backdating.
 export interface AddEntryInput {
   productType: NicotineEntry['productType'];
   nicotinePerUnitMg: number;
   amount: number;
-  pricePerUnit: number;
+  pricePerUnitEur: number;
   timestamp?: string;
 }
 
+// Build a NicotineEntry with calculated totals.
 export const buildEntry = (
   input: AddEntryInput,
-  baseCurrency: string,
 ): NicotineEntry => ({
   id: createId(),
   timestamp: input.timestamp ?? new Date().toISOString(),
@@ -19,13 +20,13 @@ export const buildEntry = (
   nicotinePerUnitMg: input.nicotinePerUnitMg,
   amount: input.amount,
   totalMg: input.nicotinePerUnitMg * input.amount,
-  pricePerUnit: input.pricePerUnit,
-  totalCost: input.pricePerUnit * input.amount,
-  currency: baseCurrency,
+  pricePerUnitEur: input.pricePerUnitEur,
+  totalCostEur: input.pricePerUnitEur * input.amount,
 });
 
+// Recompute totals after edits to nicotine, amount, or price.
 export const recalcEntryTotals = (entry: NicotineEntry): NicotineEntry => ({
   ...entry,
   totalMg: entry.nicotinePerUnitMg * entry.amount,
-  totalCost: entry.pricePerUnit * entry.amount,
+  totalCostEur: entry.pricePerUnitEur * entry.amount,
 });

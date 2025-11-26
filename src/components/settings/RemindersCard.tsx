@@ -1,36 +1,36 @@
+// Daily reminder card with toggle, number of reminders, platform time pickers, and save status line.
 import DateTimePicker, {
   DateTimePickerAndroid,
 } from '@react-native-community/datetimepicker';
 import React, { useState } from 'react';
-import {
-  Platform,
-  Switch,
-  Text,
-  TouchableOpacity,
-  View,
-} from 'react-native';
+import { Platform, Switch, Text, TouchableOpacity, View } from 'react-native';
 
 interface Props {
   enabled: boolean;
   reminderCount: number;
   reminderTimes: string[];
+  statusMessage?: string | null;
   onToggle: (val: boolean) => void;
   onChangeCount: (count: number) => void;
   onChangeTime: (text: string, idx: number) => void;
+  onSave: () => void;
 }
 
 export const RemindersCard = ({
   enabled,
   reminderCount,
   reminderTimes,
+  statusMessage,
   onToggle,
   onChangeCount,
   onChangeTime,
+  onSave,
 }: Props) => {
   const [iosPickerIndex, setIosPickerIndex] = useState<number | null>(null);
   const [iosPickerTime, setIosPickerTime] = useState<Date>(new Date());
 
   const parseTimeToDate = (time: string) => {
+    // Turn a HH:MM string into a Date anchored to today.
     const [h, m = '0'] = time.split(':');
     const hour = Math.max(0, Math.min(23, Number.parseInt(h, 10) || 0));
     const minute = Math.max(0, Math.min(59, Number.parseInt(m, 10) || 0));
@@ -40,6 +40,7 @@ export const RemindersCard = ({
   };
 
   const formatDateToTime = (date: Date) => {
+    // Format a Date object into HH:MM text.
     const hour = date.getHours();
     const minute = date.getMinutes();
     return `${hour.toString().padStart(2, '0')}:${minute
@@ -48,6 +49,7 @@ export const RemindersCard = ({
   };
 
   const openTimePicker = (index: number, current: string) => {
+    // Open the platform time picker for a specific reminder slot.
     const initialDate = parseTimeToDate(current);
     if (Platform.OS === 'android') {
       DateTimePickerAndroid.open({
@@ -67,6 +69,7 @@ export const RemindersCard = ({
   };
 
   const handleIosChange = (_: any, date?: Date) => {
+    // Store the picked time from the iOS spinner.
     if (date !== undefined && iosPickerIndex !== null) {
       onChangeTime(formatDateToTime(date), iosPickerIndex);
       setIosPickerTime(date);
@@ -149,6 +152,26 @@ export const RemindersCard = ({
             </View>
           )}
         </View>
+      </View>
+
+      <View className="mt-4 flex-row justify-end">
+        {statusMessage ? (
+          <Text className="flex-1 text-right text-sm font-semibold" style={{ color: '#1abc9c' }}>
+            {statusMessage}
+          </Text>
+        ) : null}
+        <TouchableOpacity
+          className={`rounded-full px-4 py-3 ${enabled ? 'bg-secondary' : 'bg-sand/60'}`}
+          activeOpacity={enabled ? 0.8 : 1}
+          disabled={!enabled}
+          onPress={onSave}
+        >
+          <Text
+            className={`text-sm font-semibold ${enabled ? 'text-sand' : 'text-night/60'}`}
+          >
+            Save reminders
+          </Text>
+        </TouchableOpacity>
       </View>
     </View>
   );

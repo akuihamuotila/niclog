@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 
-import { initDb, loadAllEntries } from '../db/nicotineDb';
+import { initDb } from '../db/nicotineDb';
+import { nicotineService } from '../services/nicotineService';
 import { NicotineState } from '../types/nicotine';
 import { loadSettings } from '../utils/settingsStorage';
 import { mergeSettings } from './mergeSettings';
@@ -12,11 +13,12 @@ interface Params {
 
 export const useNicotineBootstrap = ({ setState, setIsLoading }: Params) => {
   useEffect(() => {
+    // Initialize the DB and load entries/settings once when the app mounts.
     const bootstrap = async () => {
       try {
         await initDb();
         const [entries, storedSettings] = await Promise.all([
-          loadAllEntries(),
+          nicotineService.loadAll(),
           loadSettings(),
         ]);
 

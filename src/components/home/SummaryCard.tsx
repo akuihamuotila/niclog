@@ -1,10 +1,12 @@
+// Card showing today's nicotine total, cost, and progress toward the limit.
 import React from 'react';
 import { Text, View } from 'react-native';
+
+import { DISPLAY_CURRENCY } from '../../utils/currencyLabel';
 
 interface Props {
   totalMg: number;
   totalCost: number;
-  baseCurrency: string;
   dailyLimitMg: number | null;
   limitProgress: number | null;
 }
@@ -12,7 +14,6 @@ interface Props {
 export const SummaryCard = ({
   totalMg,
   totalCost,
-  baseCurrency,
   dailyLimitMg,
   limitProgress,
 }: Props) => {
@@ -36,7 +37,7 @@ export const SummaryCard = ({
           {totalMg.toFixed(1)} mg
         </Text>
         <Text className="mt-2 text-base text-sand/90">
-          Today’s cost: {totalCost.toFixed(2)} {baseCurrency}
+          Today’s cost: {totalCost.toFixed(2)} {DISPLAY_CURRENCY}
         </Text>
         {dailyLimitMg ? (
           <Text className="text-sm text-sand/80">
@@ -52,6 +53,7 @@ export const SummaryCard = ({
       {dailyLimitMg ? (
         <View className="mt-6 h-3 w-full overflow-hidden rounded-full bg-sand/30">
           <View
+            // Visual progress against the daily limit.
             className="h-full rounded-full bg-secondary"
             style={{ width: `${limitProgress ?? 0}%` }}
           />

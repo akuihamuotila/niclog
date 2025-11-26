@@ -1,11 +1,12 @@
+// Form for adding a nicotine entry with product picker, numeric inputs, preview, and submit.
 import React from 'react';
 import { Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 import { ProductType } from '../../types/nicotine';
 import { ProductSelector } from './ProductSelector';
+import { DISPLAY_CURRENCY } from '../../utils/currencyLabel';
 
 interface Props {
-  baseCurrency: string;
   selectedProduct: ProductType | null;
   nicotinePerUnit: string;
   amount: string;
@@ -20,7 +21,6 @@ interface Props {
 }
 
 export const EntryForm = ({
-  baseCurrency,
   selectedProduct,
   nicotinePerUnit,
   amount,
@@ -60,21 +60,25 @@ export const EntryForm = ({
         />
         <TextInput
           className="w-full rounded-2xl border border-primary/10 bg-white px-4 py-3 text-night shadow-sm"
-          placeholder={`Price per unit (${baseCurrency})`}
+          placeholder={`Price per unit (${DISPLAY_CURRENCY})`}
           placeholderTextColor="#6b7280"
           keyboardType="numeric"
           value={pricePerUnit}
           onChangeText={onChangePrice}
         />
         {preview && (
+          // Live preview of totals so users see what will be saved.
           <Text className="text-center text-sm text-primary">
             This entry: {preview.totalMg.toFixed(1)} mg ·{' '}
-            {preview.totalCost.toFixed(2)} {baseCurrency}
+            {preview.totalCost.toFixed(2)} {DISPLAY_CURRENCY}
           </Text>
         )}
       </View>
 
-      {error && <Text className="mt-2 text-center text-sm text-red-600">{error}</Text>}
+      {error && (
+        // Friendly validation/error feedback.
+        <Text className="mt-2 text-center text-sm text-red-600">{error}</Text>
+      )}
 
       <TouchableOpacity
         className="mt-6 rounded-full bg-secondary px-4 py-4 shadow-md"
