@@ -1,6 +1,6 @@
 # NicLog
 
-NicLog is a mobile app built with Expo + React Native that helps people log every nicotine use, track spending in EUR, and see habits over time. All data stays on-device (SQLite for entries, AsyncStorage for settings) with optional daily reminders.
+NicLog is a mobile app built with Expo + React Native that helps people log every nicotine use, track spending in EUR, and see habits over time. All data stays on-device (SQLite for entries, AsyncStorage for settings) with optional daily reminders and a small external “Daily tip” pulled from a public API (with offline fallback).
 
 ## 🚀 Core Features
 
@@ -12,7 +12,7 @@ The app focuses on a single user role: anyone who wants to monitor and reduce ni
 * Optional daily reminders via Expo Notifications to prompt logging.
 
 ### Insights & Progress
-* Daily summary shows total nicotine (mg), cost (EUR) with limit progress, and a refreshed “Daily tip” quote (has an offline fallback; refreshes when opening or adding an entry).
+* Daily summary shows total nicotine (mg), cost (EUR) with limit progress, and a refreshed “Daily tip” quote (offline fallback; refreshes when opening the screen or adding an entry).
 * Stats screen charts daily mg over 7/30/90/180/365 days or all time and lists per-day breakdowns.
 
 ### Experience
@@ -78,11 +78,13 @@ NicLog/
 ├── App.tsx                     # Navigation setup
 ├── src/
 │   ├── components/             # UI building blocks (home, stats, settings)
-│   ├── contexts/               # State, hooks, persistence, reminders
+│   ├── contexts/               # State and actions (entries/settings/reminders), bootstrap/persist hooks
 │   ├── db/                     # SQLite helpers for nicotine entries
+│   ├── hooks/                  # Reusable hooks (e.g., daily quote)
 │   ├── screens/                # Home, Stats, Settings screens
+│   ├── services/               # Data services (nicotine persistence, quote fetch)
 │   ├── types/                  # Shared TypeScript types
-│   └── utils/                  # Common helpers (reminders, settings storage, stats)
+│   └── utils/                  # Common helpers (reminders, settings storage, stats, currency label)
 ├── assets/                     # Icons, sounds, images
 └── scripts/                    # Tooling (e.g., reset-project)
 ```
