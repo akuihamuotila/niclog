@@ -71,12 +71,45 @@ export const insertEntry = async (entry: NicotineEntry): Promise<void> => {
   }
 };
 
+export const updateEntry = async (entry: NicotineEntry): Promise<void> => {
+  try {
+    const db = await getDb();
+    await db.runAsync(
+      `UPDATE ${TABLE_NAME}
+       SET timestamp = ?, productType = ?, nicotinePerUnitMg = ?, amount = ?, totalMg = ?, pricePerUnit = ?, totalCost = ?, currency = ?
+       WHERE id = ?`,
+      entry.timestamp,
+      entry.productType,
+      entry.nicotinePerUnitMg,
+      entry.amount,
+      entry.totalMg,
+      entry.pricePerUnit,
+      entry.totalCost,
+      entry.currency,
+      entry.id,
+    );
+  } catch (error) {
+    console.error('Failed to update nicotine entry', error);
+    throw error;
+  }
+};
+
 export const clearAllEntries = async (): Promise<void> => {
   try {
     const db = await getDb();
     await db.execAsync(`DELETE FROM ${TABLE_NAME}`);
   } catch (error) {
     console.error('Failed to clear nicotine entries', error);
+    throw error;
+  }
+};
+
+export const deleteEntry = async (id: string): Promise<void> => {
+  try {
+    const db = await getDb();
+    await db.runAsync(`DELETE FROM ${TABLE_NAME} WHERE id = ?`, id);
+  } catch (error) {
+    console.error('Failed to delete nicotine entry', error);
     throw error;
   }
 };

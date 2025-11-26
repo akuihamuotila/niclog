@@ -1,40 +1,39 @@
-import React, {
-  createContext,
-  useCallback,
-  useContext,
-  useEffect,
-  useMemo,
-  useState,
-} from 'react';
+import React, { createContext, useCallback, useContext, useMemo, useState } from 'react';
 
-import { initDb, insertEntry, loadAllEntries } from '../db/nicotineDb';
+import {
+  deleteEntry as deleteDbEntry,
+  insertEntry,
+  updateEntry as updateDbEntry,
+} from '../db/nicotineDb';
 import {
   CurrencyRates,
   NicotineEntry,
-  NicotineState,
-  ProductType,
+  NicotineState
 } from '../types/nicotine';
+import { defaultSettings } from '../utils/settingsStorage';
 import {
-  defaultSettings,
-  loadSettings,
-  saveSettings,
-} from '../utils/settingsStorage';
-
-interface AddEntryInput {
-  productType: ProductType;
-  nicotinePerUnitMg: number;
-  amount: number;
-  pricePerUnit: number;
-}
+  AddEntryInput,
+  buildEntry,
+  recalcEntryTotals,
+} from './nicotineEntries';
+import { getDateKey, getTotalsForDay, sanitizeReminderTimes } from './nicotineHelpers';
+import { useNicotineBootstrap } from './useNicotineBootstrap';
+import { useNicotineRates } from './useNicotineRates';
+import { useNicotineReminders } from './useNicotineReminders';
+import { usePersistSettings } from './usePersistSettings';
 
 export interface NicotineContextValue {
   state: NicotineState;
   isLoading: boolean;
   addEntry(input: AddEntryInput): Promise<void>;
+  updateEntry(entry: NicotineEntry): Promise<void>;
   setDailyLimit(limitMg: number | null): Promise<void>;
   setBaseCurrency(currency: string): Promise<void>;
   setDailyReminder(enabled: boolean): Promise<void>;
   setReminderHour(hour: number): Promise<void>;
+  setReminderHours(hours: number[]): Promise<void>;
+  setReminderTimes(times: string[]): Promise<void>;
+  deleteEntryById(id: string): Promise<void>;
   setCurrencyRates(rates: CurrencyRates): Promise<void>;
   getTodayTotalMg(): number;
   getTodayTotalCost(): number;
@@ -47,48 +46,6 @@ const NicotineContext = createContext<NicotineContextValue | undefined>(
   undefined,
 );
 
-const createId = () => {
-  const randomUuid =
-    typeof globalThis !== 'undefined'
-      ? (globalThis as typeof globalThis & {
-          crypto?: { randomUUID?: () => string };
-        }).crypto?.randomUUID
-      : undefined;
-
-  if (randomUuid) {
-    return randomUuid.call(
-      (globalThis as typeof globalThis & { crypto?: unknown }).crypto,
-    );
-  }
-  return `nic-${Date.now().toString(36)}-${Math.random()
-    .toString(36)
-    .slice(2, 8)}`;
-};
-
-const getDateKey = (date: Date) => date.toISOString().split('T')[0];
-
-const getTotalsForDay = (
-  targetDate: Date,
-  entries: NicotineEntry[],
-): { totalMg: number; totalCost: number } => {
-  const start = new Date(targetDate);
-  start.setHours(0, 0, 0, 0);
-  const end = new Date(start);
-  end.setDate(start.getDate() + 1);
-
-  return entries.reduce(
-    (acc, entry) => {
-      const entryDate = new Date(entry.timestamp);
-      if (entryDate >= start && entryDate < end) {
-        acc.totalMg += entry.totalMg;
-        acc.totalCost += entry.totalCost;
-      }
-      return acc;
-    },
-    { totalMg: 0, totalCost: 0 },
-  );
-};
-
 export const NicotineProvider = ({
   children,
 }: {
@@ -100,55 +57,14 @@ export const NicotineProvider = ({
   });
   const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    const bootstrap = async () => {
-      try {
-        await initDb();
-        const [entries, storedSettings] = await Promise.all([
-          loadAllEntries(),
-          loadSettings(),
-        ]);
-
-        setState({
-          entries,
-          settings: storedSettings ?? defaultSettings,
-        });
-      } catch (error) {
-        console.error('Failed to bootstrap nicotine data', error);
-        setState({
-          entries: [],
-          settings: defaultSettings,
-        });
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    bootstrap();
-  }, []);
-
-  useEffect(() => {
-    if (isLoading) {
-      return;
-    }
-    saveSettings(state.settings).catch((error) => {
-      console.error('Failed to persist nicotine settings', error);
-    });
-  }, [isLoading, state.settings]);
+  useNicotineBootstrap({ setState, setIsLoading });
+  useNicotineRates({ state, isLoading, setState });
+  useNicotineReminders({ state, isLoading });
+  usePersistSettings({ state, isLoading });
 
   const addEntry = useCallback(
     async (input: AddEntryInput) => {
-      const entry: NicotineEntry = {
-        id: createId(),
-        timestamp: new Date().toISOString(),
-        productType: input.productType,
-        nicotinePerUnitMg: input.nicotinePerUnitMg,
-        amount: input.amount,
-        totalMg: input.nicotinePerUnitMg * input.amount,
-        pricePerUnit: input.pricePerUnit,
-        totalCost: input.pricePerUnit * input.amount,
-        currency: state.settings.baseCurrency,
-      };
+      const entry = buildEntry(input, state.settings.baseCurrency);
 
       try {
         await insertEntry(entry);
@@ -164,6 +80,23 @@ export const NicotineProvider = ({
     [state.settings.baseCurrency],
   );
 
+  const updateEntry = useCallback(
+    async (entry: NicotineEntry) => {
+      const updated = recalcEntryTotals(entry);
+      try {
+        await updateDbEntry(updated);
+        setState((prev) => ({
+          ...prev,
+          entries: prev.entries.map((e) => (e.id === updated.id ? updated : e)),
+        }));
+      } catch (error) {
+        console.error('Failed to update nicotine entry', error);
+        throw error;
+      }
+    },
+    [],
+  );
+
   const setDailyLimit = useCallback(
     async (limitMg: number | null) => {
       setState((prev) => ({
@@ -177,7 +110,11 @@ export const NicotineProvider = ({
   const setBaseCurrency = useCallback(async (currency: string) => {
     setState((prev) => ({
       ...prev,
-      settings: { ...prev.settings, baseCurrency: currency },
+      settings: {
+        ...prev.settings,
+        baseCurrency: currency,
+        currencyRates: null,
+      },
     }));
   }, []);
 
@@ -191,8 +128,53 @@ export const NicotineProvider = ({
   const setReminderHour = useCallback(async (hour: number) => {
     setState((prev) => ({
       ...prev,
-      settings: { ...prev.settings, reminderHour: hour },
+      settings: {
+        ...prev.settings,
+        reminderHour: hour,
+        reminderHours: [hour],
+        reminderTimes: [`${hour.toString().padStart(2, '0')}:00`],
+      },
     }));
+  }, []);
+
+  const setReminderHours = useCallback(async (hours: number[]) => {
+    const safeHours = hours.map((h) => Math.max(0, Math.min(23, Math.round(h))));
+    setState((prev) => ({
+      ...prev,
+      settings: {
+        ...prev.settings,
+        reminderHours: safeHours,
+        reminderTimes: safeHours.map(
+          (h) => `${h.toString().padStart(2, '0')}:00`,
+        ),
+      },
+    }));
+  }, []);
+
+  const setReminderTimes = useCallback(async (times: string[]) => {
+    setState((prev) => {
+      const nextTimes = sanitizeReminderTimes(
+        times,
+        prev.settings.reminderTimes ?? defaultSettings.reminderTimes,
+      );
+      const nextHours = nextTimes.map((t) =>
+        Number.parseInt(t.split(':')[0], 10),
+      );
+      const nextPrimaryHour =
+        nextTimes.length > 0
+          ? Number.parseInt(nextTimes[0].split(':')[0], 10)
+          : prev.settings.reminderHour;
+
+      return {
+        ...prev,
+        settings: {
+          ...prev.settings,
+          reminderTimes: nextTimes,
+          reminderHours: nextHours,
+          reminderHour: nextPrimaryHour,
+        },
+      };
+    });
   }, []);
 
   const setCurrencyRates = useCallback(async (rates: CurrencyRates) => {
@@ -202,15 +184,38 @@ export const NicotineProvider = ({
     }));
   }, []);
 
+  const deleteEntryById = useCallback(async (id: string) => {
+    try {
+      await deleteDbEntry(id);
+      setState((prev) => ({
+        ...prev,
+        entries: prev.entries.filter((entry) => entry.id !== id),
+      }));
+    } catch (error) {
+      console.error('Failed to delete nicotine entry', error);
+      throw error;
+    }
+  }, []);
+
   const getTodayTotalMg = useCallback(() => {
-    const totals = getTotalsForDay(new Date(), state.entries);
+    const totals = getTotalsForDay(
+      new Date(),
+      state.entries,
+      state.settings.baseCurrency,
+      state.settings.currencyRates,
+    );
     return totals.totalMg;
-  }, [state.entries]);
+  }, [state.entries, state.settings.baseCurrency, state.settings.currencyRates]);
 
   const getTodayTotalCost = useCallback(() => {
-    const totals = getTotalsForDay(new Date(), state.entries);
+    const totals = getTotalsForDay(
+      new Date(),
+      state.entries,
+      state.settings.baseCurrency,
+      state.settings.currencyRates,
+    );
     return totals.totalCost;
-  }, [state.entries]);
+  }, [state.entries, state.settings.baseCurrency, state.settings.currencyRates]);
 
   const getDailyTotals = useCallback(
     (daysBack: number) => {
@@ -221,7 +226,12 @@ export const NicotineProvider = ({
       for (let i = daysBack - 1; i >= 0; i -= 1) {
         const day = new Date(today);
         day.setDate(today.getDate() - i);
-        const { totalMg, totalCost } = getTotalsForDay(day, state.entries);
+        const { totalMg, totalCost } = getTotalsForDay(
+          day,
+          state.entries,
+          state.settings.baseCurrency,
+          state.settings.currencyRates,
+        );
         totals.push({
           date: getDateKey(day),
           totalMg,
@@ -231,7 +241,11 @@ export const NicotineProvider = ({
 
       return totals;
     },
-    [state.entries],
+    [
+      state.entries,
+      state.settings.baseCurrency,
+      state.settings.currencyRates,
+    ],
   );
 
   const value = useMemo<NicotineContextValue>(
@@ -239,10 +253,14 @@ export const NicotineProvider = ({
       state,
       isLoading,
       addEntry,
+      updateEntry,
       setDailyLimit,
       setBaseCurrency,
       setDailyReminder,
       setReminderHour,
+      setReminderHours,
+      setReminderTimes,
+      deleteEntryById,
       setCurrencyRates,
       getTodayTotalMg,
       getTodayTotalCost,
@@ -252,10 +270,14 @@ export const NicotineProvider = ({
       state,
       isLoading,
       addEntry,
+      updateEntry,
       setDailyLimit,
       setBaseCurrency,
       setDailyReminder,
       setReminderHour,
+      setReminderHours,
+      setReminderTimes,
+      deleteEntryById,
       setCurrencyRates,
       getTodayTotalMg,
       getTodayTotalCost,

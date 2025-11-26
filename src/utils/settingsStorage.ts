@@ -9,6 +9,8 @@ export const defaultSettings: NicotineSettings = {
   baseCurrency: 'EUR',
   dailyReminderEnabled: false,
   reminderHour: 20,
+  reminderHours: [20],
+  reminderTimes: ['20:00'],
   currencyRates: null,
 };
 

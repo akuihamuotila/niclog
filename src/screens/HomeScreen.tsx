@@ -1,28 +1,16 @@
 import { Audio } from 'expo-av';
 import * as Haptics from 'expo-haptics';
-import { useEffect, useMemo, useRef, useState } from 'react';
-import {
-  FlatList,
-  ScrollView,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
-} from 'react-native';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { EntryForm } from '../components/home/EntryForm';
+import { SummaryCard } from '../components/home/SummaryCard';
+import { TodayEntries } from '../components/home/TodayEntries';
 import { useNicotine } from '../contexts/NicotineContext';
 import { ProductType } from '../types/nicotine';
 
 type SoundRef = Audio.Sound | null;
-
-const PRODUCT_OPTIONS: { label: string; value: ProductType }[] = [
-  { label: 'Snus', value: 'snus' },
-  { label: 'Pouch', value: 'pouch' },
-  { label: 'Vape', value: 'vape' },
-  { label: 'Cigarette', value: 'cigarette' },
-  { label: 'Other', value: 'other' },
-];
 
 const parseNumber = (value: string) => {
   const parsed = parseFloat(value.replace(',', '.'));
@@ -145,188 +133,47 @@ export const HomeScreen = () => {
     }
   };
 
-  const renderEntry = ({
-    item,
-  }: {
-    item: (typeof todayEntries)[number];
-  }) => {
-    const time = new Date(item.timestamp).toLocaleTimeString([], {
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-    return (
-      <View className="mb-3 rounded-2xl bg-white/70 px-4 py-3 shadow-sm">
-        <Text className="text-sm font-semibold text-primary">
-          {time} • {item.productType.charAt(0).toUpperCase()}
-          {item.productType.slice(1)}
-        </Text>
-        <Text className="mt-1 text-sm text-night">
-          {item.amount} × {item.nicotinePerUnitMg} mg = {item.totalMg} mg
-        </Text>
-        <Text className="text-sm text-night">
-          {item.amount} × {item.pricePerUnit} {baseCurrency} = {item.totalCost}{' '}
-          {baseCurrency}
-        </Text>
-      </View>
-    );
-  };
-
   return (
     <SafeAreaView className="flex-1 bg-sand">
-      <ScrollView
+      <KeyboardAvoidingView
         className="flex-1"
-        contentContainerStyle={{
-          paddingHorizontal: 20,
-          paddingVertical: 20,
-          gap: 16,
-        }}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 64 : 0}
       >
-        <View className="overflow-hidden rounded-3xl bg-primary/90 p-6 shadow-lg">
-          <View className="flex-row items-center justify-between">
-            <Text className="text-lg font-semibold text-sand">
-              Keep within daily limit
-            </Text>
-            {dailyLimitMg ? (
-              <View className="flex-row items-center gap-2">
-                <Text className="text-sm font-semibold text-sand">
-                  {dailyLimitMg} mg
-                </Text>
-              </View>
-            ) : null}
-          </View>
+        <ScrollView
+          className="flex-1"
+          contentContainerStyle={{
+            paddingHorizontal: 20,
+            paddingVertical: 20,
+            gap: 16,
+          }}
+        >
+          <SummaryCard
+            totalMg={totalMg}
+            totalCost={totalCost}
+            baseCurrency={baseCurrency}
+            dailyLimitMg={dailyLimitMg}
+            limitProgress={limitProgress}
+          />
 
-          <View className="mt-6 items-center">
-            <Text className="text-5xl font-bold text-sand">
-              {totalMg.toFixed(1)} mg
-            </Text>
-            <Text className="mt-2 text-base text-sand/90">
-              Today’s cost: {totalCost.toFixed(2)} {baseCurrency}
-            </Text>
-            {dailyLimitMg ? (
-              <Text className="text-sm text-sand/80">
-                {limitProgress !== null
-                  ? `${Math.min(limitProgress, 100).toFixed(0)}% of limit`
-                  : 'Limit set'}
-              </Text>
-            ) : (
-              <Text className="text-sm text-sand/80">
-                No daily limit set
-              </Text>
-            )}
-          </View>
+          <EntryForm
+            baseCurrency={baseCurrency}
+            selectedProduct={selectedProduct}
+            nicotinePerUnit={nicotinePerUnit}
+            amount={amount}
+            pricePerUnit={pricePerUnit}
+            preview={preview}
+            error={error}
+            onSelectProduct={setSelectedProduct}
+            onChangeNicotine={setNicotinePerUnit}
+            onChangeAmount={setAmount}
+            onChangePrice={setPricePerUnit}
+            onSubmit={handleAddEntry}
+          />
 
-          {dailyLimitMg ? (
-            <View className="mt-6 h-3 w-full overflow-hidden rounded-full bg-sand/30">
-              <View
-                className="h-full rounded-full bg-secondary"
-                style={{ width: `${limitProgress ?? 0}%` }}
-              />
-            </View>
-          ) : null}
-
-          {dailyLimitMg !== null && totalMg > dailyLimitMg && (
-            <Text className="mt-2 text-sm font-semibold text-red-100">
-              Daily limit exceeded
-            </Text>
-          )}
-        </View>
-
-        <View className="rounded-3xl bg-white/90 p-5 shadow-sm">
-          <Text className="text-center text-xl font-semibold text-night">
-            Log new entry
-          </Text>
-
-          <View className="mt-5 flex-row flex-wrap justify-center gap-3">
-            {PRODUCT_OPTIONS.map((option) => {
-              const isSelected = option.value === selectedProduct;
-              return (
-                <TouchableOpacity
-                  key={option.value}
-                  className={`w-[30%] min-w-[90px] items-center rounded-2xl px-3 py-3 ${
-                    isSelected ? 'bg-secondary' : 'bg-sand'
-                  }`}
-                  onPress={() => setSelectedProduct(option.value)}
-                >
-                  <Text
-                    className={`text-sm font-semibold ${
-                      isSelected ? 'text-sand' : 'text-night'
-                    }`}
-                  >
-                    {option.label}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-
-          <View className="mt-6 space-y-3">
-            <TextInput
-              className="w-full rounded-2xl border border-primary/10 bg-white px-4 py-3 text-night shadow-sm"
-              placeholder="Nicotine per unit (mg)"
-              placeholderTextColor="#6b7280"
-              keyboardType="numeric"
-              value={nicotinePerUnit}
-              onChangeText={setNicotinePerUnit}
-            />
-            <TextInput
-              className="w-full rounded-2xl border border-primary/10 bg-white px-4 py-3 text-night shadow-sm"
-              placeholder="Amount"
-              placeholderTextColor="#6b7280"
-              keyboardType="numeric"
-              value={amount}
-              onChangeText={setAmount}
-            />
-            <TextInput
-              className="w-full rounded-2xl border border-primary/10 bg-white px-4 py-3 text-night shadow-sm"
-              placeholder={`Price per unit (${baseCurrency})`}
-              placeholderTextColor="#6b7280"
-              keyboardType="numeric"
-              value={pricePerUnit}
-              onChangeText={setPricePerUnit}
-            />
-            {preview && (
-              <Text className="text-center text-sm text-primary">
-                This entry: {preview.totalMg.toFixed(1)} mg ·{' '}
-                {preview.totalCost.toFixed(2)} {baseCurrency}
-              </Text>
-            )}
-          </View>
-
-          {error && (
-            <Text className="mt-2 text-center text-sm text-red-600">
-              {error}
-            </Text>
-          )}
-
-          <TouchableOpacity
-            className="mt-6 rounded-full bg-secondary px-4 py-4 shadow-md"
-            onPress={handleAddEntry}
-          >
-            <Text className="text-center text-lg font-semibold text-sand">
-              Add entry
-            </Text>
-          </TouchableOpacity>
-        </View>
-
-        <View className="mb-6 rounded-3xl bg-white/90 p-5 shadow-sm">
-          <Text className="text-lg font-semibold text-night">
-            Today’s entries
-          </Text>
-          {todayEntries.length === 0 ? (
-            <Text className="mt-2 text-sm text-night/70">
-              No entries logged yet.
-            </Text>
-          ) : (
-            <FlatList
-              className="mt-3"
-              data={todayEntries}
-              renderItem={renderEntry}
-              keyExtractor={(item) => item.id}
-              scrollEnabled={false}
-            />
-          )}
-        </View>
-      </ScrollView>
+          <TodayEntries entries={todayEntries} baseCurrency={baseCurrency} />
+        </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 };

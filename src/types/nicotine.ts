@@ -23,6 +23,8 @@ export interface NicotineSettings {
   baseCurrency: string;
   dailyReminderEnabled: boolean;
   reminderHour: number;
+  reminderHours?: number[];
+  reminderTimes?: string[];
   currencyRates: CurrencyRates | null;
 }
 

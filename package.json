@@ -24,6 +24,8 @@
     "expo-haptics": "~15.0.7",
     "expo-image": "~3.0.10",
     "expo-linking": "~8.0.9",
+    "@react-native-community/datetimepicker": "7.6.1",
+    "expo-notifications": "~0.32.13",
     "expo-splash-screen": "~31.0.11",
     "expo-sqlite": "~16.0.9",
     "expo-status-bar": "~3.0.8",
