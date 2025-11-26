@@ -1,58 +1,99 @@
-# 💀 NicLog
+# NicLog
 
-**Most details are subject to change.**
+NicLog is a mobile app built with Expo + React Native that helps people log every nicotine use, track spending in EUR, and see habits over time. All data stays on-device (SQLite for entries, AsyncStorage for settings) with optional daily reminders and a small external “Daily tip” pulled from a public API (with offline fallback).
 
-**NicLog** is a mobile app built with **Expo**, **React Native**, and **TypeScript** that helps users **track every nicotine use throughout the day** and visualize their habits over time.
+## 🚀 Core Features
 
----
+The app focuses on a single user role: anyone who wants to monitor and reduce nicotine use.
 
-## 🚀 Core Functionality
+### Logging & Tracking
+* Quick entry for product type (snus, pouch, vape, cigarette, other), nicotine per unit, amount, and price.
+* Stores entries locally in SQLite for offline use; recalculates totals on edits.
+* Optional daily reminders via Expo Notifications to prompt logging.
 
-NicLog’s main feature is simple and powerful:  
-Whenever you use a nicotine product — a pouch, cigarette, or vape session — you **open the app and log it**.  
-Each log is saved locally, and over time, the app builds **charts and statistics** that show your total consumption, nicotine intake, and cost trends.
+### Insights & Progress
+* Daily summary shows total nicotine (mg), cost (EUR) with limit progress, and a refreshed “Daily tip” quote (offline fallback; refreshes when opening the screen or adding an entry).
+* Stats screen charts daily mg over 7/30/90/180/365 days or all time and lists per-day breakdowns.
 
----
+### Experience
+* Haptic and sound feedback when adding entries.
+* Simple, touch-friendly UI built for fast daily use.
 
-## ⚙️ Features
+## 🛠 Technology Stack
 
-### 🧮 Logging
-- Quick input for **product type**, **nicotine per unit**, and **price per unit**  
-- Adds an entry every time you log use  
-- Stores data locally with **SQLite**, ensuring offline access
+### Mobile App
+![Expo](https://img.shields.io/badge/Expo-000020?style=for-the-badge&logo=expo&logoColor=white)
+![React Native](https://img.shields.io/badge/React_Native-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)
+![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?style=for-the-badge&logo=typescript&logoColor=white)
+![React Navigation](https://img.shields.io/badge/React_Navigation-000000?style=for-the-badge&logo=react&logoColor=white)
+![NativeWind](https://img.shields.io/badge/NativeWind-06B6D4?style=for-the-badge&logo=tailwindcss&logoColor=white)
+![SQLite](https://img.shields.io/badge/SQLite-07405E?style=for-the-badge&logo=sqlite&logoColor=white)
+![AsyncStorage](https://img.shields.io/badge/AsyncStorage-000000?style=for-the-badge&logo=react&logoColor=white)
+![expo-notifications](https://img.shields.io/badge/Expo_Notifications-FFBA08?style=for-the-badge&logo=bell&logoColor=white)
+![react-native-svg](https://img.shields.io/badge/react--native--svg-0F7A94?style=for-the-badge&logo=svg&logoColor=white)
+![Reanimated](https://img.shields.io/badge/Reanimated-1C1E24?style=for-the-badge&logo=react&logoColor=61DAFB)
+![Gesture Handler](https://img.shields.io/badge/Gesture_Handler-1C1E24?style=for-the-badge&logo=react&logoColor=61DAFB)
 
-### 📊 Statistics
-- Displays your data in **interactive charts** (7 / 30 / 90 / 180 / 365 days & all time)  
-- Calculates totals, averages, and progress  
-- Helps you identify habits and reduction patterns
+### Libraries & APIs
+- Navigation: `@react-navigation/native`, `@react-navigation/native-stack`, `@react-navigation/bottom-tabs`, `@react-navigation/elements`
+- UI/styling: `nativewind`, Tailwind classes, `react-native-safe-area-context`, `react-native-screens`
+- Storage: `expo-sqlite` for entries, `@react-native-async-storage/async-storage` for settings
+- Notifications & feedback: `expo-notifications`, `expo-haptics`, `expo-av`
+- Charts & visuals: `react-native-svg`
+- Core React Native stack: `react-native-gesture-handler`, `react-native-reanimated`
+- Utilities & Expo modules: `expo-constants`, `expo-font`, `expo-image`, `expo-linking`, `expo-splash-screen`, `expo-status-bar`, `expo-system-ui`, `expo-web-browser`
+- External data: public quote API `https://api.quotable.io/random` for the Daily Tip card
 
-### 💱 Currency & Cost Tracking
-- Shows total daily, monthly and yearly cost  
-- Fetches exchange rates from a simple **REST API** (cached 24 h for offline use)
+## 🚀 Getting Started
 
-### 🔔 Feedback & Experience
-- **Haptic feedback** and **button sound effects** with **expo-haptics** and **expo-av**  
-- Optional **daily reminder notification** to log your usage  
-- Clean, minimal UI for fast daily interaction
+### Prerequisites
+- Node.js 18+ and npm
+- Expo CLI (`npm install -g expo-cli`) or use `npx expo start`
+- iOS Simulator (Xcode), Android Emulator, or Expo Go on a device
 
----
+### Setup
 
-## 🧩 Tech Stack
+1. Install dependencies:
+   ```bash
+   npm install
+   ```
+2. Start the app:
+   ```bash
+   npx expo start
+   ```
+3. Run on a device/emulator:
+   - Press `i` for iOS simulator, `a` for Android emulator, or scan the QR code with Expo Go.
 
-| Category | Technologies |
-|-----------|---------------|
-| Framework | **Expo**, **React Native**, **TypeScript** |
-| Storage | **SQLite** (entries), **AsyncStorage** (settings) |
-| Navigation | **@react-navigation/native-stack** |
-| Charts | **react-native-svg** |
-| Device APIs | **expo-haptics**, **expo-notifications**, **expo-av** |
-| Data | Currency rates **REST API** |
-| Utilities | **date-fns**, custom hooks & contexts |
-| Formatting | **Prettier** |
+## 🧪 Testing
 
----
+No automated tests yet. Run linting with:
+```bash
+npm run lint
+```
 
-## 💡 Summary
+## 📂 Project Structure
 
-NicLog turns nicotine tracking into a simple daily routine.  
-Open it, mark your use, and let it quietly build insight into your habits — helping you **see, understand, and gradually reduce** your nicotine consumption.
+```
+NicLog/
+├── App.tsx                     # Navigation setup
+├── src/
+│   ├── components/             # UI building blocks (home, stats, settings)
+│   ├── contexts/               # State and actions (entries/settings/reminders), bootstrap/persist hooks
+│   ├── db/                     # SQLite helpers for nicotine entries
+│   ├── hooks/                  # Reusable hooks (e.g., daily quote)
+│   ├── screens/                # Home, Stats, Settings screens
+│   ├── services/               # Data services (nicotine persistence, quote fetch)
+│   ├── types/                  # Shared TypeScript types
+│   └── utils/                  # Common helpers (reminders, settings storage, stats, currency label)
+├── assets/                     # Icons, sounds, images
+└── scripts/                    # Tooling (e.g., reset-project)
+```
+
+## 👥 Author
+
+* Aku Ihamuotila
+
+## 🔒 Notes on Data & Privacy
+
+- Entries and settings are stored locally on the device (SQLite + AsyncStorage).
+- Notifications are local-only and scheduled on device.

@@ -3,6 +3,7 @@
   "compilerOptions": {
     "strict": true,
     "module": "ESNext",
+    "jsx": "react-jsx",
     "baseUrl": ".",
     "paths": {
       "@/*": [
@@ -17,10 +18,8 @@
     "App.tsx",
     "src/**/*.ts",
     "src/**/*.tsx",
-    "nativewind.d.ts",
-    "tailwind.config.js",
-    ".expo/types/**/*.ts",
-    "expo-env.d.ts"
+    "nativewind-env.d.ts",
+    "tailwind.config.js"
   ],
   "exclude": [
     "node_modules"
